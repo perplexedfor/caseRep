@@ -5,34 +5,27 @@ description = "A Tauri App"
 authors = ["you"]
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[lib]
-# The `_lib` suffix may seem redundant but it is necessary
-# to make the lib name unique and wouldn't conflict with the bin name.
-# This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
-name = "caserep_lib"
-crate-type = ["staticlib", "cdylib", "rlib"]
-
 [build-dependencies]
-tauri-build = { version = "2", features = [] }
+tauri-build = "2"
 
 [dependencies]
-tauri = { version = "2", features = [] }
+tauri = "2"
 tauri-plugin-opener = "2"
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
-rusqlite = { version = "0.36.0", features = ["bundled"] }
-chrono = { version = "0.4", features = ["serde"] }
 tauri-plugin-fs = "2"
 tauri-plugin-log = "2"
-log = "0.4"
+
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
 serde_plain = "1"
+
+rusqlite = { version = "0.36.0", features = ["bundled"] }
+chrono = { version = "0.4", features = ["serde"] }
+log = "0.4"
 convert_case = "0.4"
 
-[patch.crates-io]
-webkit2gtk = { version = "0.18", features = ["v2_40"] }
-webkit2gtk-sys = { version = "0.18" }
+webkit2gtk-sys = { version = "0.18", features = ["v2_40"] }
+
+
 
 
 
