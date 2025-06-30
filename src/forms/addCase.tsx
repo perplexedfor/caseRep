@@ -1,32 +1,31 @@
 import React, { useEffect, useState } from "react";
 import { CircleX,ChevronDown } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
-import { NatureOfCase, AssignedTo } from "../types/case";
+import { NatureOfCase } from "../types/case";
 interface ModalFormProps {
   isOpen: boolean;
   onClose: () => void;
   title: string;
   formId: string;
 }
+import { useAssignedTo } from "../lib/assignedContext";
 
 // Assumes SelectField is defined and imported correctly
 // Example:
 // import { SelectField } from "./SelectField";
 
-
 const InitialForm: React.FC<ModalFormProps> = ({ isOpen, onClose, title, formId }) => {
   const [currentDate, setCurrentDate] = useState("");
   const [currentDay, setCurrentDay] = useState("");
+    const { options, loading } = useAssignedTo();
+  
+    
 
-  const natureOfCaseOptions = Object.values(NatureOfCase).map((option) => ({
-  value: option,
-  label: option.replace(/([a-z])([A-Z])/g, "$1 $2"), // adds space between camel-case words
-  }));
+    const natureOfCaseOptions = Object.values(NatureOfCase).map((option) => ({
+    value: option,
+    label: option.replace(/([a-z])([A-Z])/g, "$1 $2"), // adds space between camel-case words
+    }));
 
-  const assignedToOptions = Object.values(AssignedTo).map((option) => ({
-  value: option,
-  label: option.replace(/_/g, " "),
-  }));
 
   useEffect(() => {
     const now = new Date();
@@ -37,6 +36,10 @@ const InitialForm: React.FC<ModalFormProps> = ({ isOpen, onClose, title, formId 
     setCurrentDate(dateStr);
     setCurrentDay(dayStr);
   }, []);
+
+  if (loading) {
+      return <p>Loading...</p>;
+    }
   
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -51,20 +54,27 @@ const InitialForm: React.FC<ModalFormProps> = ({ isOpen, onClose, title, formId 
       return;
     }
 
-    invoke("insert_case", {payload : {
-      case_no: caseNo,
-      nature_of_case: formData.get("nature-of-case") ? formData.get("nature-of-case") : "",
-      received_from: formData.get("received-from") ? formData.get("received-from") : "",
-      time_slot: formData.get("time-of-assignment") ? formData.get("time-of-assignment") : "",
-      party1: formData.get("party1") ? formData.get("party1") : "",
-      party2: formData.get("party2") ? formData.get("party2") : "",
-      assigned_to: formData.get("assigned-to") ? formData.get("assigned-to") : "",
-    }}).then(() => {
+    const currentYear = new Date().getFullYear();
+
+    invoke("insert_case", {
+      payload: {
+        case_no: caseNo,
+        year: currentYear, 
+        nature_of_case: formData.get("nature-of-case") || "",
+        received_from: formData.get("received-from") || "",
+        time_slot: formData.get("time-of-assignment") || "",
+        party1: formData.get("party1") || "",
+        party2: formData.get("party2") || "",
+        assigned_to: formData.get("assigned-to") || "",
+      },
+    })
+      .then(() => {
         console.log("Case added successfully");
       })
       .catch((error) => {
         console.error("Error adding case:", error);
       });
+
 
     for (const [key, value] of formData.entries()) {
       console.log(`${key}: ${value}`);
@@ -139,7 +149,92 @@ const InitialForm: React.FC<ModalFormProps> = ({ isOpen, onClose, title, formId 
             </div>
 
             <SelectField id="nature-of-case" label="Nature of Case" options={natureOfCaseOptions} />
-            <SelectField id="received-from" label="Received From" options={["Annexure A","Caw Cell(N)","CAW Cell(OD)","DLSA"]} />
+            <SelectField
+              id="received-from"
+              label="Received From"
+              options={[
+                "Annexure A",
+                "Caw Cell(N)",
+                "CAW Cell(OD)",
+                "DLSA",
+                "Gurvinder Pal Singh, Pr. District & Sessions Judge, North West",
+                "Preeti Agrawal Gupta, District Judge (Commercial Court-01), North West",
+                "Vinod Yadav, District Judge (Commercial Court-02), North West",
+                "Kapil Kumar, ASJ, (Spl. FTC) North West",
+                "Neeti Suri Mishra, ASJ, (FTSC) POCSO North West",
+                "Prashant Kumar, ASJ, (Electricity) North West",
+                "Rajani Ranga ASJ-01, (POCSO) North West",
+                "Shivaji Anand, ASJ, (Spl. Judge, NDPS, SC/ST) North West",
+                "Muneesh Garg, ASJ-03, North West",
+                "Jasjeet Kaur, ASJ-04 (POCSO), North West",
+                "Rajinder Kumar, ASJ-05, North West",
+                "Vikram, District Judge-01/ MACT, North West",
+                "Rakesh Kumar Singh, District Judge-02, North West",
+                "Ashish Aggarwal, District Judge-03, North West",
+                "Sunil Chaudhary, District Judge-04, North West",
+                "Shama Gupta, PO, (MACT) North West",
+                "Anuj Kumar Singh, Sr. Civil Judge, North West",
+                "Mansi Malik, ACJ/CCJ/ARC, North West",
+                "Gaurav Sharma, JSCC/ASCJ/GJ, North West",
+                "Arjun Kirar, CJ, North West",
+                "Vasundhra Chhaunkar, CJM, North West",
+                "Vivek Beniwal, ACJM, North West",
+                "Abhinav Singh, JMFC-01, North West",
+                "Apoorv Bhardwaj, JMFC-02, North West",
+                "Ebbani Aggarwal, JMFC-03, North West",
+                "Divya Arora, JMFC-04, North West",
+                "Reetika Jain, JMFC-05, North West",
+                "Shagun, JMFC-06, North West",
+                "Gaurav Katariya, JMFC-07, North West",
+                "Aishwarya Sharma, JMFC(Mahila Court-1), North West",
+                "Neha Goel, JMFC(Mahila Court-2), North West",
+                "Nitika, JMFC (NIA), North West",
+                "Surbhi Sharma, JMFC (NIA), Digital Court-01, North West",
+                "Surbhi Sharma, JMFC (NIA), Digital Court-02, North West",
+                "Shraddha Tripathi, JMFC (NIA), Digital Court-03, North West",
+                "Kashish Bajaj, JMFC (Digital Traffic Court), North West",
+                "Gaurav Singal, Reliever Judge DLSA, North West",
+                "Dinesh Bhatt, Pr. Judge, Family Court, North West",
+                "Hemraj, Judge, Family Court, North West",
+                "Anju Bajaj Chandna, Pr. District & Sessions Judge, North",
+                "Anil Kumar, District Judge (Commercial Court-01), North",
+                "Umed Singh, District Judge (Commercial Court-02), North",
+                "Dhirendra Rana, ASJ, Spl. Judge (NDPS) North",
+                "Ajay Nagar, ASJ, (FTSC) POCSO North",
+                "Anil Sehrawat, ASJ-01, (POCSO. FTC) North",
+                "Vandana, ASJ-02, North",
+                "Jagmohan Singh, ASJ-03 (Pilot Court), North",
+                "Sushil Kumar, ASJ-04, North",
+                "Pooja Jain, ASJ-05 (POCSO), North",
+                "Sidharth Mathur, District Judge-01/ LAC, North",
+                "Vikram Bali, District Judge-02, North",
+                "Aanchal, District Judge-03, North",
+                "Ravinder Singh-2, District Judge-04, North",
+                "Sunil Kumar, PO, (MACT-1) North",
+                "Richa Manchanda, PO, (MACT-2) North",
+                "Himanshu Raman Singh, Sr. Civil Judge/RC, North",
+                "Ajay Singh Parihar, ACJ/CCJ/ARC, North",
+                "Nitish Kumar Sharma, JSCC/ASCJ/GJ, North",
+                "Renu, CJ, North",
+                "Amardeep Kaur, ACJM, North",
+                "Bhujali, JMFC-01, North",
+                "Neha Kheria, JMFC-02, North",
+                "Himanshu Sehloth, JMFC-03, North",
+                "Rohit Kumar, JMFC-04, North",
+                "Sarthak Panwar, JMFC-05, North",
+                "Garima Jindal, JMFC-06, North",
+                "Jyoti Nain, JMFC-07, North",
+                "Sanya Dalal, JMFC(Mahila Court-1), North",
+                "Disha Singh, JMFC(Mahila Court-2), North",
+                "Gaurav Dahiya, JMFC (NIA), Digital Court-01, North",
+                "Priyanka, JMFC (NIA), Digital Court-02, North",
+                "Shreejee Abbot, JMFC (Digital Traffic Court), North",
+                "DLSA, North",
+                "Pankaj Gupta, Pr. Judge, Family Court, North",
+                "Neeraj Gaur, Judge, Family Court, North"
+              ]}
+            />
+
             <SelectField
               id="time-of-assignment"
               label="Time of Assignment"
@@ -177,7 +272,7 @@ const InitialForm: React.FC<ModalFormProps> = ({ isOpen, onClose, title, formId 
               </div>
             </div>
 
-            <SelectField id="assigned-to" label="Assigned To" options={assignedToOptions} />
+            <SelectField id="assigned-to" label="Assigned To" options={options} />
 
             <div className="pt-2">
               <button

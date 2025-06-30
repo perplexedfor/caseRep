@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { CircleX } from "lucide-react";
 import { SelectField } from "./addCase";
-import { AssignedTo, NatureOfCase } from "../types/case";
+import { NatureOfCase } from "../types/case";
 import { invoke } from "@tauri-apps/api/core";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { useAssignedTo } from "../lib/assignedContext";
+import handshake from "../assets/handshake.png"; // Adjust the path as necessary
+
 
 interface GenerateSpecificReportProps {
   isOpen: boolean;
@@ -17,93 +20,110 @@ const GenerateSpecificReportForm: React.FC<GenerateSpecificReportProps> = ({ isO
   const [currentDate, setCurrentDate] = useState("");
   const [currentDay, setCurrentDay] = useState("");
 
-  // const caseType = Object.values(DisposalOfCase).map((option) => ({
-  //   value: option,
-  //   label: option,
-  // }));
+  const { options, loading } = useAssignedTo();
 
-  const assignedToOptions = Object.values(AssignedTo).map((option) => ({
-    value: option,
-    label: option.replace(/_/g, " "),
-  }));
+
+
+
 
   const natureOfCaseOptions = Object.values(NatureOfCase).map((option) => ({
     value: option,
     label: option.replace(/([a-z])([A-Z])/g, "$1 $2"), // adds space between camel-case words
   }));
 
-  async function handleFilteredCasesReportPDF(formData: FormData, startDate: string, endDate: string) {
-    try {
-      const payload = {
-        nature_of_case: formData.get("natureOfCase") || null,
-        assigned_to: formData.get("assignedTo") || null,
-        start_date: startDate,
-        end_date: endDate,
-      };
 
-      const result = await invoke("query_cases_with_filters", { payload }) as {
-        cases: Array<any>,
-        summary: {
-          settled: number;
-          not_settled: number;
-          not_fit: number;
-          connected: number;
-        }
-      };
+async function handleFilteredCasesReportPDF(formData: FormData, startDate: string, endDate: string) {
+  try {
+    const payload = {
+      nature_of_case: formData.get("natureOfCase") || null,
+      assigned_to: formData.get("assignedTo") || null,
+      start_date: startDate,
+      end_date: endDate,
+    };
 
-      const sanitize = (text: any) => String(text ?? "").replace(/_/g, " ");
+    const result = await invoke("query_cases_with_filters", { payload }) as {
+      cases: Array<any>,
+      summary: {
+        settled: number;
+        not_settled: number;
+        not_fit: number;
+        pending: number;
+      }
+    };
 
-      const doc = new jsPDF();
-      doc.setFontSize(14);
-      doc.text("Filtered Case Report", 14, 20);
+    const sanitize = (text: any) => String(text ?? "").replace(/_/g, " ");
 
-      const headers = [
-        "Case No",
-        "Nature",
-        "Received From",
-        "Date & Time",
-        "Party 1",
-        "Party 2",
-        "Assigned To",
-        "NDOH",
-        "Disposal"
-      ];
+    const doc = new jsPDF();
+    const img = new Image();
+    img.src = handshake;
 
-      const rows = result.cases.map((c) => [
-        sanitize(c.case_no),
-        sanitize(c.nature_of_case),
-        sanitize(c.received_from),
-        sanitize(`${c.date} ${c.time_slot ?? ""}`),
-        sanitize(c.party1),
-        sanitize(c.party2),
-        sanitize(c.assigned_to),
-        c.ndoh_date ? sanitize(`${c.ndoh_date} ${c.ndoh_time ?? ""}`) : "",
-        sanitize(c.disposal_of_case),
-      ]);
+    await new Promise((resolve) => {
+      img.onload = resolve;
+    });
 
-      autoTable(doc, {
-        startY: 30,
-        head: [headers],
-        body: rows,
-        styles: { fontSize: 10 },
-        headStyles: { fillColor: [41, 128, 185] },
-      });
+    const canvas = document.createElement('canvas');
+    canvas.width = img.width;
+    canvas.height = img.height;
+    const ctx = canvas.getContext('2d')!;
+    ctx.drawImage(img, 0, 0);
 
-      // Add summary at the bottom
-      const finalY = (doc as any).lastAutoTable.finalY + 10;
-      doc.setFontSize(12);
-      doc.text("Summary", 14, finalY);
-      doc.setFontSize(10);
-      doc.text(`Settled: ${result.summary.settled}`, 14, finalY + 6);
-      doc.text(`Not Settled: ${result.summary.not_settled}`, 14, finalY + 12);
-      doc.text(`Not Fit: ${result.summary.not_fit}`, 14, finalY + 18);
-      doc.text(`Connected: ${result.summary.connected}`, 14, finalY + 24);
+    const logoBase64 = canvas.toDataURL('image/png');
 
-      doc.save("filtered_case_report.pdf");
-    } catch (error) {
-      console.error("Error generating filtered PDF report:", error);
-    }
+    // ✅ Add image at the top
+    doc.addImage(logoBase64, 'PNG', 95, 10, 20, 15);
+
+    doc.setFontSize(14);
+    doc.text("Filtered Case Report", 85, 30);
+
+    const headers = [
+      "Case No",
+      "Nature",
+      "Received From",
+      "Date & Time",
+      "Party 1",
+      "Party 2",
+      "Assigned To",
+      "NDOH",
+      "Disposal",
+      "Connected",
+    ];
+
+    const rows = result.cases.map((c) => [
+      sanitize(c.case_no),
+      sanitize(c.nature_of_case),
+      sanitize(c.received_from),
+      sanitize(`${c.date} ${c.time_slot ?? ""}`),
+      sanitize(c.party1),
+      sanitize(c.party2),
+      sanitize(c.assigned_to),
+      c.ndoh_date ? sanitize(`${c.ndoh_date} ${c.ndoh_time ?? ""}`) : "",
+      sanitize(c.disposal_of_case),
+      c.connected ? sanitize(c.connected.toString()) : "No",
+    ]);
+
+    autoTable(doc, {
+      startY: 40, // Lowered to make space for the image
+      head: [headers],
+      body: rows,
+      styles: { fontSize: 8 },
+      // headStyles: { fillColor: [41, 128, 185] },
+    });
+
+    const finalY = (doc as any).lastAutoTable.finalY + 10;
+    doc.setFontSize(12);
+    doc.text("Summary", 14, finalY);
+    doc.setFontSize(10);
+    doc.text(`Settled: ${result.summary.settled}`, 14, finalY + 6);
+    doc.text(`Not Settled: ${result.summary.not_settled}`, 14, finalY + 12);
+    doc.text(`Not Fit: ${result.summary.not_fit}`, 14, finalY + 18);
+    doc.text(`Pending ${result.summary.pending}`, 14, finalY + 24);
+
+    doc.save("filtered_case_report.pdf");
+  } catch (error) {
+    console.error("Error generating filtered PDF report:", error);
   }
+}
+
 
   useEffect(() => {
     const now = new Date();
@@ -112,6 +132,10 @@ const GenerateSpecificReportForm: React.FC<GenerateSpecificReportProps> = ({ isO
     setCurrentDate(dateStr);
     setCurrentDay(dayStr);
   }, []);
+
+    if (loading) {
+    return <p>Loading...</p>;
+  }
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -200,7 +224,7 @@ const GenerateSpecificReportForm: React.FC<GenerateSpecificReportProps> = ({ isO
           <SelectField
             id="assignedTo"
             label="Assigned To"
-            options={assignedToOptions}
+            options={options}
           />
 
           <div>

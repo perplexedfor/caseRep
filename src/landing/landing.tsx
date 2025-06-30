@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from "react";
-import { CirclePlus, PenLine, BookText, FileClock } from "lucide-react";
+import { CirclePlus, PenLine, BookText, FileClock, Settings } from "lucide-react";
 import InitialForm from "../forms/addCase";
 import GenerateSpecificReportForm from "../forms/generateSpecificReport";
 import CaseUpdateForm from "../forms/updateCaseStatus";
+import ManageAssignedTo from "../forms/changeMediator";
 import { invoke } from "@tauri-apps/api/core";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable"; 
+import handshake from "../assets/handshake.png";
 
 const InitialPage: React.FC = () => {
   const [currentDate, setCurrentDate] = useState("");
@@ -50,59 +52,80 @@ const InitialPage: React.FC = () => {
   );
 
 
-async function handleGenerateReportPDF() {
-  try {
-    const result = await invoke("get_todays_cases") as Array<any>;
+  async function handleGenerateReportPDF() {
+    try {
+      const result = await invoke("get_todays_cases") as Array<any>;
 
-    if (!result.length) {
-      console.warn("No cases to export.");
-      return;
+      if (!result.length) {
+        console.warn("No cases to export.");
+        return;
+      }
+
+      const sanitize = (text: any) =>
+        String(text ?? "").replace(/_/g, " ");
+
+      const doc = new jsPDF();
+
+      // ✅ Load the image to Base64
+      const img = new Image();
+      img.src = handshake;
+
+      await new Promise((resolve) => {
+        img.onload = resolve;
+      });
+
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d')!;
+      ctx.drawImage(img, 0, 0);
+
+      const logoBase64 = canvas.toDataURL('image/png');
+
+      // ✅ Add image at the top
+      doc.addImage(logoBase64, 'PNG', 95, 10, 20, 15);
+
+      doc.setFontSize(12);
+      doc.text("Today's Case Report", 85, 30);
+
+      const headers = [
+        "Case No",
+        "Nature",
+        "Received From",
+        "Date & Time",
+        "Party 1",
+        "Party 2",
+        "Assigned To",
+        "NDOH",
+        "Disposal"
+      ];
+
+      const rows = result.map((c) => [
+        sanitize(c.case_no),
+        sanitize(c.nature_of_case),
+        sanitize(c.received_from),
+        sanitize(`${c.date} ${c.time_slot ?? ""}`),
+        sanitize(c.party1),
+        sanitize(c.party2),
+        sanitize(c.assigned_to),
+        c.ndoh_date ? sanitize(`${c.ndoh_date} ${c.ndoh_time ?? ""}`) : "",
+        sanitize(c.disposal_of_case),
+      ]);
+
+      autoTable(doc, {
+        startY: 40, // Lower to make room for the image
+        head: [headers],
+        body: rows,
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [41, 128, 185] },
+      });
+
+      doc.save("case_report.pdf");
+    } catch (error) {
+      console.error("Error generating PDF report:", error);
     }
-
-    const sanitize = (text: any) =>
-    String(text ?? "").replace(/_/g, " ");
-
-    const doc = new jsPDF();
-    doc.setFontSize(12);
-    doc.text("Today's Case Report", 14, 20);
-
-    const headers = [
-      "Case No",
-      "Nature",
-      "Received From",
-      "Date & Time",
-      "Party 1",
-      "Party 2",
-      "Assigned To",
-      "NDOH",
-      "Disposal"
-    ];
-
-    const rows = result.map((c) => [
-      sanitize(c.case_no),
-      sanitize(c.nature_of_case),
-      sanitize(c.received_from),
-      sanitize(`${c.date} ${c.time_slot ?? ""}`),
-      sanitize(c.party1),
-      sanitize(c.party2),
-      sanitize(c.assigned_to),
-      c.ndoh_date ? sanitize(`${c.ndoh_date} ${c.ndoh_time ?? ""}`) : "",
-      sanitize(c.disposal_of_case),
-    ]);
-
-    autoTable(doc, {
-      startY: 30,
-      head: [headers],
-      body: rows,
-      styles: { fontSize: 10 },
-      headStyles: { fillColor: [41, 128, 185] },
-    });
-
-    doc.save("case_report.pdf");
-  } catch (error) {
-    console.error("Error generating PDF report:", error);
   }
-}
+
 
 
   return (
@@ -115,7 +138,7 @@ async function handleGenerateReportPDF() {
               Delhi Mediation Centre, Rohini Courts, Delhi
             </p>
             <div className="flex justify-center items-center mt-4 ">
-              <img src="handshake.jpg" alt="Handshake" width={100} height={100}/>
+              <img src="handshake.png" alt="Handshake" width={100} height={100}/>
             </div>
             <p className="text-lg font-medium text-slate-700 mt-2">
               Today's Date:{" "}
@@ -139,6 +162,10 @@ async function handleGenerateReportPDF() {
                   onClose={() => setOpenModal(null)}
                   title="Update Case Status"
                   formId="form3"
+                />
+                <ManageAssignedTo
+                  isOpen={openModal === 'changemediatornames'}
+                  onClose={() => setOpenModal(null)}
                 />
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <ButtonCard
@@ -173,6 +200,12 @@ async function handleGenerateReportPDF() {
                 title="Generate Specific Report"
                 description="Generate a custom Report."
                 buttonText="Generate Report"
+              />
+              <ButtonCard
+                icon={<Settings color="blue" />}
+                title="Change Mediator Names"
+                description="Change the names of mediators in the system."
+                buttonText="Change Names"
               />
             </div>
           </div>

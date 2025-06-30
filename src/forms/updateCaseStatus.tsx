@@ -49,18 +49,14 @@ const CaseUpdateForm: React.FC<CaseUpdateFormProps> = ({ isOpen, onClose, title,
         case_no: parseInt(formData.get("case-no")?.toString() || "0", 10),
         disposal_of_case: formData.get("disposal-of-case"),
         ndoh_date: ndohDateStr,
-        ndoh_time: formData.get("ndoh-time")
+        ndoh_time: formData.get("ndoh-time"),
+        connected: parseInt(formData.get("connected")?.toString() || "0", 10),
       }
     }).then(() => {
       console.log("Case updated successfully");
     }).catch((err) => {
       console.error("Error updating case:", err);
     });
-
-
-    // for (const [key, value] of formData.entries()) {
-    //   console.log(`${key}: ${value}`);
-    // }
 
     e.currentTarget.reset();
     onClose();
@@ -117,6 +113,7 @@ const CaseUpdateForm: React.FC<CaseUpdateFormProps> = ({ isOpen, onClose, title,
             inputMode="numeric"    // shows numeric keyboard on mobile
             required
           />
+
           <SelectField
             id="disposal-of-case"
             label="Disposal of Case"
@@ -124,19 +121,38 @@ const CaseUpdateForm: React.FC<CaseUpdateFormProps> = ({ isOpen, onClose, title,
           />
 
           <div>
+            <label htmlFor="connected" className="block text-sm font-medium text-gray-700 mb-1">Connected</label>
+            <input
+              type="number"
+              id="connected"
+              name="connected"
+              min={0}    
+              max={99}              
+              className="block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm"
+              placeholder="Enter connected value (0–99)"
+              required
+            />
+          </div>
+
+          <div>
             <label htmlFor="ndoh-date" className="block text-sm font-medium text-gray-700 mb-1">NDOH Date (If not settled)</label>
-            <input type="date" id="ndoh-date" name="ndoh-date" className="block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm" />
+            <input
+              type="date"
+              id="ndoh-date"
+              name="ndoh-date"
+              className="block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm"
+            />
           </div>
 
           <SelectField
-              id="ndoh-time"
-              label="Time"
-              options={[
-                "10:00", "10:30", "11:00", "11:30", "12:00", "12:30",
-                "13:00", "13:30", "14:00", "14:30", "15:00", "15:30",
-                "16:00", "16:30", "17:00",
-              ]}
-            />
+            id="ndoh-time"
+            label="Time"
+            options={[
+              "10:00", "10:30", "11:00", "11:30", "12:00", "12:30",
+              "13:00", "13:30", "14:00", "14:30", "15:00", "15:30",
+              "16:00", "16:30", "17:00",
+            ]}
+          />
 
           <button
             type="submit"
@@ -145,6 +161,7 @@ const CaseUpdateForm: React.FC<CaseUpdateFormProps> = ({ isOpen, onClose, title,
             Update Status
           </button>
         </form>
+
       </div>
     </div>
   );

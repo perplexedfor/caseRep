@@ -14,9 +14,11 @@ fn init_db(path: String) -> Result<(), String> {
 
     println!("DB path: {}", db_path.display());
 
+
     if DB_PATH.set(db_path.clone()).is_err() {
         return Err("Database path has already been set!".to_string());
     }
+
 
     // Ensure directory exists
     if !db_path.exists() {
@@ -30,13 +32,18 @@ fn init_db(path: String) -> Result<(), String> {
             .map_err(|e| format!("Failed to create file: {}", e))?;
     }
 
+    println!("Initializing database at: {}", db_path.display());
+
     // Initialize DB connection
     let db = Db::init(db_path.clone())
         .map_err(|e| format!("Failed to initialize DB: {}", e))?;
 
+    println!("Database initialized successfully at: {}", db_path.display());
+
     DB_INSTANCE
         .set(Arc::new(Mutex::new(db)))
         .map_err(|_| "Database already initialized".to_string())?;
+    println!("DB instance set successfully");
 
     Ok(())
 }
@@ -57,6 +64,7 @@ pub fn get_db_instance() -> &'static Arc<Mutex<Db>> {
 #[derive(Deserialize,Debug)]
 struct NewCasePayload {
     case_no: i32,
+    year: i32,
     nature_of_case: String,
     received_from: String, // New field for received_from
     time_slot: String,
@@ -80,6 +88,7 @@ fn insert_case(payload: NewCasePayload) -> Result<usize, String>{
 
     db.insert_case(
         payload.case_no,
+        payload.year,
         nature,
         payload.received_from,
         time,
@@ -100,6 +109,7 @@ struct UpdatePayload {
     ndoh_date: String,
     ndoh_time: String,
     disposal_of_case: String,
+    connected: Option<i32>, // Optional field for connected status   
 }
 
 #[tauri::command]
@@ -116,8 +126,9 @@ fn update_case(payload: UpdatePayload) -> Result<usize, String> {
         .map_err(|_| "Invalid time format".to_string())?;
     let disposal = serde_json::from_str(&format!("\"{}\"", payload.disposal_of_case))
         .map_err(|_| "Invalid disposal_of_case".to_string())?;
+    let connected = payload.connected; // Default to 0 if not provided
 
-    db.update_case_details(payload.case_no, ndoh_date, ndoh_time, disposal)
+    db.update_case_details(payload.case_no, ndoh_date, ndoh_time, disposal, connected)
         .map_err(|e| e.to_string())
 }
 
@@ -155,16 +166,9 @@ fn query_cases_with_filters(
     let end = NaiveDate::parse_from_str(&payload.end_date, "%Y-%m-%d")
         .map_err(|e| format!("Invalid end_date: {}", e))?;
 
-    // Parse enum from string if provided
-    let nature_enum = match payload.nature_of_case {
-        Some(ref val) if !val.is_empty() => {
-            Some(serde_json::from_str(&format!("\"{}\"", val)).map_err(|e| format!("Invalid case type: {}", e))?)
-        }
-        _ => None,
-    };
 
     let result = db
-        .query_cases_filtered(nature_enum, payload.assigned_to, start, end)
+        .query_cases_filtered(payload.nature_of_case, payload.assigned_to, start, end)
         .map_err(|e| e.to_string())?;
 
     // Ok(())
@@ -173,6 +177,27 @@ fn query_cases_with_filters(
         cases: result.0,
         summary: result.1,
     })
+}
+
+#[tauri::command]
+fn get_assigned_to_list() -> Result<Vec<String>, String> {
+    let db = get_db_instance();
+    let db = db.lock().unwrap();
+    db.get_assigned_to_list()
+}
+
+#[tauri::command]
+fn add_assigned_to(name: String) -> Result<(), String> {
+    let db = get_db_instance();
+    let db = db.lock().unwrap();
+    db.add_assigned_to(name)
+}
+
+#[tauri::command]
+fn delete_assigned_to(name: String) -> Result<(), String> {
+    let db = get_db_instance();
+    let db = db.lock().unwrap();
+    db.delete_assigned_to(name)
 }
 
 
@@ -191,7 +216,10 @@ pub fn run() {
         insert_case,
         update_case,
         get_todays_cases,
-        query_cases_with_filters
+        query_cases_with_filters,
+        get_assigned_to_list,
+        add_assigned_to,
+        delete_assigned_to,
     ])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");
