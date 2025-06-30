@@ -66,4 +66,3 @@ jobs:
         with:
           name: linux-build
           path: src-tauri/target/release/bundle
-

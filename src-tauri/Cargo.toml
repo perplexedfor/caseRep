@@ -30,4 +30,9 @@ log = "0.4"
 serde_plain = "1"
 convert_case = "0.4"
 
+[patch.crates-io]
+webkit2gtk = { version = "0.18", features = ["v2_40"] }
+webkit2gtk-sys = { version = "0.18" }
+
+
 
