@@ -24,7 +24,10 @@ jobs:
         with:
           toolchain: stable
           override: true
-
+      - name: Enable Universe & Update
+        run: |
+            sudo add-apt-repository universe
+            sudo apt-get update
       - name: Install Linux build deps
         run: |
             sudo apt-get update
