@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v3
 
       - name: Setup Node.js
@@ -25,9 +25,15 @@ jobs:
           toolchain: stable
           override: true
 
-      - name: Install Linux build dependencies
+      - name: Enable Universe & Update
         run: |
           sudo apt-get update
+          sudo apt-get install -y software-properties-common
+          sudo add-apt-repository universe
+          sudo apt-get update
+
+      - name: Install Linux build dependencies
+        run: |
           sudo apt-get install -y \
             libgtk-3-dev \
             libwebkit2gtk-4.0-dev \
@@ -35,27 +41,25 @@ jobs:
             libjavascriptcoregtk-4.1-dev \
             build-essential \
             pkg-config \
-            curl
+            curl \
+            squashfs-tools
 
-      - name: Debug pkg-config
+      - name: Debug available webkit versions
         run: |
-          pkg-config --list-all | grep webkit
-          ls -la /usr/lib/pkgconfig | grep webkit
-
-      - name: Build Tauri app
-        run: |
-          export WEBKIT2GTK_VERSION=4.0
-          npm install
-          npm run tauri build
+          echo "=== pkg-config webkit ==="
+          pkg-config --list-all | grep webkit || true
+          echo "=== /usr/lib/pkgconfig ==="
+          ls -la /usr/lib/pkgconfig | grep webkit || true
+          echo "=== /usr/share/pkgconfig ==="
+          ls -la /usr/share/pkgconfig | grep webkit || true
 
       - name: Install Node dependencies
         run: npm install
 
       - name: Build Tauri app
-        run: |
-            export WEBKIT2GTK_WEBKIT2GTK_4_VERSION=4.0
-            npm run tauri build
-
+        env:
+          WEBKIT2GTK_VERSION: 4.0
+        run: npm run tauri build
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
