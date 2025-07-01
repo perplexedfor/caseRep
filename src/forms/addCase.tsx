@@ -42,47 +42,53 @@ const InitialForm: React.FC<ModalFormProps> = ({ isOpen, onClose, title, formId 
     }
   
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const form = e.currentTarget;
-    const formData = new FormData(form);
+  e.preventDefault();
+  const form = e.currentTarget;
+  const formData = new FormData(form);
 
-    const caseNoStr = formData.get("case-no");
-    const caseNo = caseNoStr ? parseInt(caseNoStr.toString(), 10) : null;
+  const caseNoStr = formData.get("case-no");
+  const yearStr = formData.get("year");
 
-    if (caseNo === null || isNaN(caseNo)) {
-      console.error("Invalid case number");
-      return;
-    }
+  const caseNo = caseNoStr ? parseInt(caseNoStr.toString(), 10) : null;
+  const year = yearStr ? parseInt(yearStr.toString(), 10) : null;
 
-    const currentYear = new Date().getFullYear();
+  if (caseNo === null || isNaN(caseNo)) {
+    console.error("Invalid case number");
+    return;
+  }
 
-    invoke("insert_case", {
-      payload: {
-        case_no: caseNo,
-        year: currentYear, 
-        nature_of_case: formData.get("nature-of-case") || "",
-        received_from: formData.get("received-from") || "",
-        time_slot: formData.get("time-of-assignment") || "",
-        party1: formData.get("party1") || "",
-        party2: formData.get("party2") || "",
-        assigned_to: formData.get("assigned-to") || "",
-      },
+  if (year === null || isNaN(year)) {
+    console.error("Invalid year");
+    return;
+  }
+
+  invoke("insert_case", {
+    payload: {
+      case_no: caseNo,
+      year: year, // 👈 use the user-input year
+      nature_of_case: formData.get("nature-of-case") || "",
+      received_from: formData.get("received-from") || "",
+      time_slot: formData.get("time-of-assignment") || "",
+      party1: formData.get("party1") || "",
+      party2: formData.get("party2") || "",
+      assigned_to: formData.get("assigned-to") || "",
+    },
+  })
+    .then(() => {
+      console.log("Case added successfully");
     })
-      .then(() => {
-        console.log("Case added successfully");
-      })
-      .catch((error) => {
-        console.error("Error adding case:", error);
-      });
+    .catch((error) => {
+      console.error("Error adding case:", error);
+    });
 
+  for (const [key, value] of formData.entries()) {
+    console.log(`${key}: ${value}`);
+  }
 
-    for (const [key, value] of formData.entries()) {
-      console.log(`${key}: ${value}`);
-    }
+  form.reset();
+  onClose();
+};
 
-    form.reset();
-    onClose();
-  };
 
   return (
     <div
@@ -131,22 +137,42 @@ const InitialForm: React.FC<ModalFormProps> = ({ isOpen, onClose, title, formId 
           </div>
 
           <form id={formId} className="space-y-6" onSubmit={handleSubmit}>
-            <div>
-              <label htmlFor="case-no" className="block text-sm font-medium text-gray-700 mb-1">
-                Case No.
-              </label>
-              <input
-                type="text"
-                id="case-no"
-                name="case-no"
-                placeholder="Enter case number"
-                className="block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm"
-                pattern="\d{6}"  
-                maxLength={6}        
-                inputMode="numeric"    
-                required
-              />
+            <div className="flex space-x-4">
+              <div className="flex-1">
+                <label htmlFor="case-no" className="block text-sm font-medium text-gray-700 mb-1">
+                  Case No.
+                </label>
+                <input
+                  type="text"
+                  id="case-no"
+                  name="case-no"
+                  placeholder="Enter case number"
+                  className="block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm"
+                  pattern="\d{6}"
+                  maxLength={6}
+                  inputMode="numeric"
+                  required
+                />
+              </div>
+
+              <div className="flex-1">
+                <label htmlFor="year" className="block text-sm font-medium text-gray-700 mb-1">
+                  Year
+                </label>
+                <input
+                  type="text"
+                  id="year"
+                  name="year"
+                  placeholder="Enter year"
+                  className="block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm"
+                  pattern="\d{4}"
+                  maxLength={4}
+                  inputMode="numeric"
+                  required
+                />
+              </div>
             </div>
+
 
             <SelectField id="nature-of-case" label="Nature of Case" options={natureOfCaseOptions} />
             <SelectField

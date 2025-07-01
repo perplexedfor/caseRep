@@ -105,7 +105,7 @@ async function handleFilteredCasesReportPDF(formData: FormData, startDate: strin
       startY: 40, // Lowered to make space for the image
       head: [headers],
       body: rows,
-      styles: { fontSize: 8 },
+      styles: { fontSize: 6 },
       // headStyles: { fillColor: [41, 128, 185] },
     });
 
@@ -144,27 +144,27 @@ async function handleFilteredCasesReportPDF(formData: FormData, startDate: strin
 
     const startDate = formData.get("start_date")?.toString();
 
-    if (startDate) {
-      const selectedDate = new Date(startDate);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
+    // if (startDate) {
+    //   // const selectedDate = new Date(startDate);
+    //   // const today = new Date();
+    //   // today.setHours(0, 0, 0, 0);
 
-      if (selectedDate > today) {
-        alert("NDOH Date cannot be in the future.");
-        return;
-      }
-    }
+    //   // if (selectedDate > today) {
+    //   //   alert("NDOH Date cannot be in the future.");
+    //   //   return;
+    //   // }
+    // }
 
 
     const endDate = formData.get("end_date")?.toString();
 
-    if (endDate) {
+    if (endDate && startDate) {
       const selectedDate = new Date(endDate);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0); // Strip time portion for accurate comparison
+      const strtDate = new Date(startDate);
+      strtDate.setHours(0, 0, 0, 0); // Strip time portion for accurate comparison
 
-      if (selectedDate > today) {
-        alert("End Date cannot be in the future.");
+      if (selectedDate < strtDate) {
+        alert("startdate cannot be more than the end date.");
         return;
       }
     }

@@ -82,7 +82,6 @@ const InitialPage: React.FC = () => {
 
       const logoBase64 = canvas.toDataURL('image/png');
 
-      // ✅ Add image at the top
       doc.addImage(logoBase64, 'PNG', 95, 10, 20, 15);
 
       doc.setFontSize(12);
